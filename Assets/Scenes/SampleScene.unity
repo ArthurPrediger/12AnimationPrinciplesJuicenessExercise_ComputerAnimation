@@ -515,6 +515,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62245c62b15269348b60784da2d801b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  middlePointPrefab: {fileID: 6279188076417237510, guid: e954048c6f628314bb2bb8edf7a04560, type: 3}
+  endPointPrefab: {fileID: 6279188076417237510, guid: 9a3f7b45eabd0bf4aae1a05a23dbb0b3, type: 3}
 --- !u!1001 &56253260178576591
 PrefabInstance:
   m_ObjectHideFlags: 0
