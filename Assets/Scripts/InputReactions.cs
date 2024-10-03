@@ -1,8 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
+using TMPro;
 using Unity.VisualScripting;
+using UnityEditor.SearchService;
 using UnityEngine;
 
 public class InputReactions : MonoBehaviour
@@ -14,6 +17,7 @@ public class InputReactions : MonoBehaviour
     private float halfScaleDelta = 0.0f;
     private Vector3 originalScale;
     bool clickUpdateOn = false;
+    float scaleStep = -0.01f;
 
     private List<Vector3> bezierPoints = new List<Vector3>();
     const int numBezierPoints = 100;
@@ -23,13 +27,17 @@ public class InputReactions : MonoBehaviour
     private float speedBackward = 4.0f;
     bool dragUpdateOn = false;
     Vector3 initPos = Vector3.zero;
+    Vector3 curVel = Vector3.zero;
+
+    [SerializeField]
+    private ParticleSystem collisionEffect;
+
+    public TMPro.TextMeshProUGUI principleName;
 
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-
-        GetComponent<InputReactions>().enabled = false;
 
         originalScale = gameObject.transform.localScale;
         Vector3 minBefore = GetComponent<Renderer>().bounds.min;
@@ -37,6 +45,9 @@ public class InputReactions : MonoBehaviour
         Vector3 minAfter = GetComponent<Renderer>().bounds.min;
         halfScaleDelta = Mathf.Abs((minAfter.y - minBefore.y) / 2.0f);
         gameObject.transform.localScale = originalScale;
+
+        principleName = FindObjectOfType<TextMeshProUGUI>();
+        principleName.text = "";
     }
 
     // Update is called once per frame
@@ -44,20 +55,59 @@ public class InputReactions : MonoBehaviour
     {
         DeformingEaseJump();
         CurveEaseMove();
+
+        if(gameObject.transform.position.y < -100.0f)
+        {
+            gameObject.transform.position = Vector3.zero;
+        }
     }
+
     private void OnCollisionEnter(Collision collision)
     {
-        handleCollisionScale = true;
+        if (clickUpdateOn)
+        {
+            handleCollisionScale = true;
+        }
+
+        if (dragUpdateOn && collision.gameObject.CompareTag("Interactive"))
+        {
+            rb.AddForce(curVel * 200.0f, ForceMode.VelocityChange);
+            dragUpdateOn = false;
+        }
+
+        List<ContactPoint> contacts = new();
+        int numContacts = collision.GetContacts(contacts);
+
+        if (collision.collider.CompareTag("Interactive"))
+        {
+            if(numContacts > 0)
+            {
+                ParticleSystem partSys = Instantiate(collisionEffect, contacts.First().point, Quaternion.identity);
+                var main = partSys.main;
+                main.startColor = (gameObject.GetComponent<MeshRenderer>().material.color + collision.gameObject.GetComponent<MeshRenderer>().material.color) * 0.5f;
+                partSys.gameObject.transform.up = contacts.First().normal;
+            }
+        }
+        else
+        {
+            ParticleSystem partSys = Instantiate(collisionEffect, contacts.First().point, Quaternion.identity);
+            var main = partSys.main;
+            main.startColor = gameObject.GetComponent<MeshRenderer>().material.color;
+            partSys.gameObject.transform.up = contacts.First().normal;
+        }
+
+        principleName.text = "Encenação";
     }
 
     public void ClickReaction()
     {
-        if (clickUpdateOn) return;
+        if (clickUpdateOn || dragUpdateOn) return;
         clickUpdateOn = true;
         handleCollisionScale = false;
-        GetComponent<InputReactions>().enabled = true;
 
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+
+        principleName.text = "Compressão e Estiramento";
     }
 
     private void DeformingEaseJump()
@@ -70,17 +120,26 @@ public class InputReactions : MonoBehaviour
             deformValue = velMag / jumpForce;
             gameObject.transform.localScale = originalScale + 1.2f * EaseOutExpo(deformValue) * Vector3.up;
         }
+        else if (scaleStep < 0.0f)
+        {
+            gameObject.transform.localScale += scaleStep * Vector3.up;
+            gameObject.transform.position += (scaleStep * halfScaleDelta) * Vector3.up;
+            if (gameObject.transform.localScale.y <= 0.4f)
+            {
+                scaleStep *= -1.0f;
+            }
+        }
         else
         {
-            const float scaleDecreaseStep = 0.01f;
-            gameObject.transform.localScale -= scaleDecreaseStep * Vector3.up;
-            gameObject.transform.position -= (scaleDecreaseStep * halfScaleDelta) * Vector3.up;
-            if (gameObject.transform.localScale.y <= 1.0f)
+            gameObject.transform.localScale += scaleStep * Vector3.up;
+            gameObject.transform.position += (scaleStep * halfScaleDelta) * Vector3.up;
+            if (gameObject.transform.localScale.y >= 1.0f)
             {
                 gameObject.transform.localScale = originalScale;
-                gameObject.transform.position += (scaleDecreaseStep * halfScaleDelta) * Vector3.up;
+                gameObject.transform.position += (scaleStep * halfScaleDelta) * Vector3.up;
                 handleCollisionScale = false;
                 clickUpdateOn = false;
+                scaleStep *= -1.0f;
             }
         }
     }
@@ -101,12 +160,12 @@ public class InputReactions : MonoBehaviour
 
     public void DragReaction(List<Vector3> curveControlPoints)
     {
-        if (dragUpdateOn) return;
+        if (dragUpdateOn || clickUpdateOn) return;
         dragUpdateOn = true;
         bezierPoints.Clear();
         tParam = -1.0f;
         initPos = curveControlPoints[0];
-        curveControlPoints[0] -= 0.2f * (curveControlPoints.Last() - curveControlPoints.First());
+        curveControlPoints[0] -= 0.25f * (curveControlPoints.Last() - curveControlPoints.First());
         float t = 0.0f;
         for (int i = 0; i < numBezierPoints; i++)
         {
@@ -125,7 +184,7 @@ public class InputReactions : MonoBehaviour
             bezierCurveLength += (bezierPoints[i + 1] - bezierPoints[i]).magnitude;
         }
 
-        GetComponent<InputReactions>().enabled = true;
+        principleName.text = "Antecipação";
     }
 
     private Vector3 CalculateBezierPoint(float t, Vector3 P0, Vector3 P1, Vector3 P2, Vector3 P3)
@@ -190,6 +249,7 @@ public class InputReactions : MonoBehaviour
             float easeT = EaseOutQuart(tParam);
 
             PathInfo pathInfo = GetPathInfoAt(easeT);
+            curVel = pathInfo.pos - gameObject.transform.position;
             gameObject.transform.position = pathInfo.pos;
 
             if (tParam >= 1.0f) dragUpdateOn = false;
