@@ -32,7 +32,7 @@ public class InputReactions : MonoBehaviour
     [SerializeField]
     private ParticleSystem collisionEffect;
 
-    public TMPro.TextMeshProUGUI principleName;
+    private TMPro.TextMeshProUGUI principlesText;
 
     // Start is called before the first frame update
     void Start()
@@ -46,8 +46,7 @@ public class InputReactions : MonoBehaviour
         halfScaleDelta = Mathf.Abs((minAfter.y - minBefore.y) / 2.0f);
         gameObject.transform.localScale = originalScale;
 
-        principleName = FindObjectOfType<TextMeshProUGUI>();
-        principleName.text = "";
+        principlesText = FindObjectOfType<TextMeshProUGUI>();
     }
 
     // Update is called once per frame
@@ -77,12 +76,13 @@ public class InputReactions : MonoBehaviour
 
         List<ContactPoint> contacts = new();
         int numContacts = collision.GetContacts(contacts);
+        ParticleSystem partSys = new();
 
         if (collision.collider.CompareTag("Interactive"))
         {
             if(numContacts > 0)
             {
-                ParticleSystem partSys = Instantiate(collisionEffect, contacts.First().point, Quaternion.identity);
+                partSys = Instantiate(collisionEffect, contacts.First().point, Quaternion.identity);
                 var main = partSys.main;
                 main.startColor = (gameObject.GetComponent<MeshRenderer>().material.color + collision.gameObject.GetComponent<MeshRenderer>().material.color) * 0.5f;
                 partSys.gameObject.transform.up = contacts.First().normal;
@@ -90,13 +90,13 @@ public class InputReactions : MonoBehaviour
         }
         else
         {
-            ParticleSystem partSys = Instantiate(collisionEffect, contacts.First().point, Quaternion.identity);
+            partSys = Instantiate(collisionEffect, contacts.First().point, Quaternion.identity);
             var main = partSys.main;
             main.startColor = gameObject.GetComponent<MeshRenderer>().material.color;
             partSys.gameObject.transform.up = contacts.First().normal;
         }
 
-        principleName.text = "Encenação";
+        principlesText.GetComponent<PrinciplesTextManager>().AddPrinciple("Encenação", partSys.main.startColor.color);
     }
 
     public void ClickReaction()
@@ -107,7 +107,7 @@ public class InputReactions : MonoBehaviour
 
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
 
-        principleName.text = "Compressão e Estiramento";
+        principlesText.GetComponent<PrinciplesTextManager>().AddPrinciple("Compressão e Estiramento", GetComponent<MeshRenderer>().material.color);
     }
 
     private void DeformingEaseJump()
@@ -184,7 +184,7 @@ public class InputReactions : MonoBehaviour
             bezierCurveLength += (bezierPoints[i + 1] - bezierPoints[i]).magnitude;
         }
 
-        principleName.text = "Antecipação";
+        principlesText.GetComponent<PrinciplesTextManager>().AddPrinciple("Antecipação", GetComponent<MeshRenderer>().material.color);
     }
 
     private Vector3 CalculateBezierPoint(float t, Vector3 P0, Vector3 P1, Vector3 P2, Vector3 P3)
