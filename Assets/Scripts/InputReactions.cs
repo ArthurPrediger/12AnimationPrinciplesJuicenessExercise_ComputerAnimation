@@ -1,11 +1,7 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using TMPro;
-using Unity.VisualScripting;
-using UnityEditor.SearchService;
 using UnityEngine;
 
 public class InputReactions : MonoBehaviour
@@ -17,7 +13,7 @@ public class InputReactions : MonoBehaviour
     private float halfScaleDelta = 0.0f;
     private Vector3 originalScale;
     bool clickUpdateOn = false;
-    float scaleStep = -0.01f;
+    float scaleStep = -6f;
 
     private List<Vector3> bezierPoints = new List<Vector3>();
     const int numBezierPoints = 100;
@@ -122,8 +118,8 @@ public class InputReactions : MonoBehaviour
         }
         else if (scaleStep < 0.0f)
         {
-            gameObject.transform.localScale += scaleStep * Vector3.up;
-            gameObject.transform.position += (scaleStep * halfScaleDelta) * Vector3.up;
+            gameObject.transform.localScale += scaleStep * Time.deltaTime * Vector3.up;
+            gameObject.transform.position += (scaleStep * halfScaleDelta) * Time.deltaTime * Vector3.up;
             if (gameObject.transform.localScale.y <= 0.4f)
             {
                 scaleStep *= -1.0f;
@@ -131,12 +127,12 @@ public class InputReactions : MonoBehaviour
         }
         else
         {
-            gameObject.transform.localScale += scaleStep * Vector3.up;
-            gameObject.transform.position += (scaleStep * halfScaleDelta) * Vector3.up;
+            gameObject.transform.localScale += scaleStep * Time.deltaTime * Vector3.up;
+            gameObject.transform.position += (scaleStep * halfScaleDelta) * Time.deltaTime * Vector3.up;
             if (gameObject.transform.localScale.y >= 1.0f)
             {
                 gameObject.transform.localScale = originalScale;
-                gameObject.transform.position += (scaleStep * halfScaleDelta) * Vector3.up;
+                gameObject.transform.position += (scaleStep * halfScaleDelta) * Time.deltaTime * Vector3.up;
                 handleCollisionScale = false;
                 clickUpdateOn = false;
                 scaleStep *= -1.0f;
